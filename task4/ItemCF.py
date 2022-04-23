@@ -168,7 +168,7 @@ def ItemCF(n_user, n_item, tra_data, val_users, K ,TopN):
             item_score = avg_item_ratings[item] + corr_value_sum/weighted_scores
             record_list[item] = item_score
         user_rec_list = sorted(record_list.items(),key=lambda x:x[1],reverse=True)[:TopN]
-        rec_dict[item] = [x[0] for x in user_rec_list]
+        rec_dict[user] = [x[0] for x in user_rec_list]
     print('预测完毕!')
     return rec_dict
 
