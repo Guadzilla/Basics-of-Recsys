@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import pickle
+import math
 import os 
 import warnings
 warnings.filterwarnings('ignore')
@@ -74,7 +75,7 @@ def eval(rec_dict,val_users,tra_users):
 
 
 
-def ItemCF(n_user, n_item, tra_data, val_users, K ,TopN):
+def Pearsonr_ItemCF(n_user, n_item, tra_data, val_users, K ,TopN):
     '''
     K: K表示的是相似用户的数量，每个用户都选择与其最相似的K个用户
     N: N表示的是给用户推荐的商品数量，给每个用户推荐相似度最大的N个商品
@@ -172,15 +173,92 @@ def ItemCF(n_user, n_item, tra_data, val_users, K ,TopN):
     print('预测完毕!')
     return rec_dict
 
+def Cosine_Item_CF(trn_user_items, val_user_items, K, N):
+    '''
+    trn_user_items: 表示训练数据，格式为：{user_id1: [item_id1, item_id2,...,item_idn], user_id2...}
+    val_user_items: 表示验证数据，格式为：{user_id1: [item_id1, item_id2,...,item_idn], user_id2...}
+    K: Ｋ表示的是相似商品的数量，为每个用户交互的每个商品都选择其最相思的K个商品
+    N: N表示的是给用户推荐的商品数量，给每个用户推荐相似度最大的N个商品
+    '''
+
+    # 建立user->item的倒排表
+    # 倒排表的格式为: {user_id1: [item_id1, item_id2,...,item_idn], user_id2: ...} 也就是每个用户交互过的所有商品集合
+    # 由于输入的训练数据trn_user_items,本身就是这中格式的，所以这里不需要进行额外的计算
     
+
+    # 计算商品协同过滤矩阵
+    # 即利用user-items倒排表统计商品与商品之间被共同的用户交互的次数
+    # 商品协同过滤矩阵的表示形式为：sim = {item_id1: {item_id２: num1}, item_id３: {item_id４: num２}, ...}
+    # 商品协同过滤矩阵是一个双层的字典，用来表示商品之间共同交互的用户数量
+    # 在计算商品协同过滤矩阵的同时还需要记录每个商品被多少不同用户交互的次数，其表示形式为: num = {item_id1：num1, item_id２:num2, ...}
+    sim = {}
+    num = {}
+    print('构建相似性矩阵．．．')
+    for uid, items in tqdm(trn_user_items.items()):
+        for i in items:    
+            if i not in num:
+                num[i] = 0
+            num[i] += 1
+            if i not in sim:
+                sim[i] = {}
+            for j in items:
+                if j not in sim[i]:
+                    sim[i][j] = 0
+                if i != j:
+                    sim[i][j] += 1
+    
+    # 计算物品的相似度矩阵
+    # 商品协同过滤矩阵其实相当于是余弦相似度的分子部分,还需要除以分母,即两个商品被交互的用户数量的乘积
+    # 两个商品被交互的用户数量就是上面统计的num字典
+    print('计算协同过滤矩阵．．．')
+    for i, items in tqdm(sim.items()):
+        for j, score in items.items():
+            if i != j:
+                sim[i][j] = score / math.sqrt(num[i] * num[j])
+    
+
+    # 对验证数据中的每个用户进行TopN推荐
+    # 在对用户进行推荐之前需要先通过商品相似度矩阵得到当前用户交互过的商品最相思的前K个商品，
+    # 然后对这K个用户交互的商品中除当前测试用户训练集中交互过的商品以外的商品计算最终的相似度分数
+    # 最终推荐的候选商品的相似度分数是由多个相似商品对该商品分数的一个累加和
+    items_rank = {}
+    print('给用户进行推荐．．．')
+    for uid, _ in tqdm(val_user_items.items()):
+        items_rank[uid] = {} # 存储用户候选的推荐商品
+        for hist_item in trn_user_items[uid]: # 遍历该用户历史喜欢的商品，用来下面寻找其相似的商品
+            for item, score in sorted(sim[hist_item].items(), key=lambda x: x[1], reverse=True)[:K]:
+                if item not in trn_user_items[uid]: # 进行推荐的商品一定不能在历史喜欢商品中出现
+                    if item not in items_rank[uid]:
+                        items_rank[uid][item] = 0
+                    items_rank[uid][item] += score
+    
+    print('为每个用户筛选出相似度分数最高的Ｎ个商品...')
+    items_rank = {k: sorted(v.items(), key=lambda x: x[1], reverse=True)[:N] for k, v in items_rank.items()}
+    items_rank = {k: set([x[0] for x in v]) for k, v in items_rank.items()}
+    return items_rank
+
+
 if __name__ == "__main__":
     all_data = load_data()
     tra_data, val_data, tra_users, val_users, n_user, n_item = all_data
-    rec_dict = ItemCF(n_user, n_item, tra_data, val_users, 10 ,10)
+    #rec_dict = Pearsonr_ItemCF(n_user, n_item, tra_data, val_users, 10 ,10)
+    rec_dict = Cosine_Item_CF(tra_users, val_users, 10 ,10)
     eval(rec_dict,val_users,tra_users)
 
 
+"""
+Pearsonr_ItemCF()
+recall: 0.18
+precision 0.61
+coverage 35.17
+Popularity 5.539
+"""
 
-
-
+"""
+Cosine_Item_CF()
+recall: 9.2
+precision 30.48
+coverage 19.18
+Popularity 7.171
+"""
 
