@@ -134,6 +134,11 @@ def Pearsonr_ItemCF(n_user, n_item, tra_data, val_users, K ,TopN):
         with open('item_similarity_matrix.txt','wb') as f3:
             similarity_matrix = pickle.dump(similarity_matrix,f3)
 
+    # 处理pearsonr相关系数为nan的值
+    df = pd.DataFrame(similarity_matrix)
+    df = df.fillna(0)
+    similarity_matrix = df.to_numpy()
+    del df
 
     # 计算每个物品的平均评分，用于消除用户评分偏置
     avg_item_ratings = np.zeros(n_item)
@@ -142,34 +147,32 @@ def Pearsonr_ItemCF(n_user, n_item, tra_data, val_users, K ,TopN):
         avg_item_ratings[item] = avg_rating
 
     # 生成TopN推荐列表
-    # 计算目标物品的得分
-    # 先筛选出用户交互过的商品中，与目标物品最相似的K个物品
+    # 要预测的物品就是用户没有评分过的物品
+    # 先筛选出用户交互过的商品
+    # 再选出与目标物品最相似的K个物品
     # 根据K个物品的得分，计算目标物品的得分
     # 对这些items得分降序排列
     val_users_set = set(val_users.keys())
     rec_dict = dict()
-    print('开始预测...')
     for user in tqdm(val_users_set, total=len(val_users_set)):
         user_history = ratings_user[user].keys()
-        all_items = set(tra_data['itemID'])
-        candidate_items = all_items.symmetric_difference(user_history)  # 预测那些用户还没评分过的电影
-
+        candidate_items = set(range(n_item))
+        for i in user_history:
+            candidate_items.remove(i)   # 预测那些用户还没评分过的电影
         record_list = dict() # 记录预测得分
         for item in candidate_items:
-            history_similarity = {x:similarity_matrix[item][x] for x in user_history}
-            similar_items = [i[0] for i in sorted(history_similarity.items(),key=lambda x:x[1])][:K]  # 用户交互过的商品中，与目标物品最相似的K个物品
-            # 预测该user对该item的评分
+            rated_items = ratings_user[user].items()    # 先筛选出用户交互过的商品
+            similar_items = sorted(rated_items, key=lambda x:x[1], reverse=True)[:K]    # 再选出与目标物品最相似的K个物品
+            similar_items = [x[0] for x in similar_items]
             weighted_scores = 0 # 分母
             corr_value_sum = 0 # 分子
-            for iitem in similar_items:
+            for iitem in similar_items: # 根据K个物品的得分，计算目标物品的得分
                 weighted_scores += similarity_matrix[item][iitem]
-                if iitem not in ratings_user[user]:
-                    ratings_user[user][iitem] = 0
                 corr_value_sum += similarity_matrix[item][iitem] * (ratings_user[user][iitem] - avg_item_ratings[iitem])
             item_score = avg_item_ratings[item] + corr_value_sum/weighted_scores
             record_list[item] = item_score
-        user_rec_list = sorted(record_list.items(),key=lambda x:x[1],reverse=True)[:TopN]
-        rec_dict[user] = [x[0] for x in user_rec_list]
+        user_rec_list = sorted(record_list.items(), key=lambda x:x[1], reverse=True)[:TopN] # 对这些items得分降序排列
+        rec_dict[user] = [x[0] for x in user_rec_list]  # 得到该用户的推荐列表
     print('预测完毕!')
     return rec_dict
 
@@ -241,8 +244,8 @@ def Cosine_Item_CF(trn_user_items, val_user_items, K, N):
 if __name__ == "__main__":
     all_data = load_data()
     tra_data, val_data, tra_users, val_users, n_user, n_item = all_data
-    #rec_dict = Pearsonr_ItemCF(n_user, n_item, tra_data, val_users, 10 ,10)
-    rec_dict = Cosine_Item_CF(tra_users, val_users, 10 ,10)
+    rec_dict = Pearsonr_ItemCF(n_user, n_item, tra_data, val_users, 10 ,10)
+    #rec_dict = Cosine_Item_CF(tra_users, val_users, 10 ,10)
     eval(rec_dict,val_users,tra_users)
 
 

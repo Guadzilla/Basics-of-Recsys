@@ -376,3 +376,27 @@ A, B, C, D是物品， 看右边的物品共现矩阵， 可以发现物品D与A
 
 ## 进阶：如果不使用矩阵乘法，你能使用倒排索引实现上述计算吗？
 
+使用余弦相似度的协同过滤算法可以使用，具体见python文件。
+
+集合角度的余弦相似度计算如下：
+
+
+$$
+sim_{uv}=\frac{|N(u) \cap N(v)|}{\sqrt{|N(u)|\cdot|N(v)|}}
+$$
+
+如果只建立 user 对 item 的索引，形式如： `{uid: {item1, item2,...}, uid: {item1, item2,...}, ...}`，计算两两用户的交互交集时，比较麻烦。建立倒排表形如：`{item_id1: {user_id1, user_id2, ... , user_idn}, item_id2: ...}` ，只需要对每个 item 遍历，就可以统计两两用户的交互交集。代码如下：
+
+
+```python
+# 建立item->users倒排表
+# 倒排表的格式为: {item_id1: {user_id1, user_id2, ... , user_idn}, item_id2: ...} 也就是每个item对应有那些用户有过点击
+# 建立倒排表的目的就是为了更方便的统计用户之间共同交互的商品数量
+item_users = {}
+for uid, items in tqdm(tra_users.items()): # 遍历每一个用户的数据,其中包含了该用户所有交互的item
+    for item in items: # 遍历该用户的所有item, 给这些item对应的用户列表添加对应的uid
+        if item not in item_users:
+            item_users[item] = set()
+            item_users[item].add(uid)
+```
+

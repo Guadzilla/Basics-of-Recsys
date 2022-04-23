@@ -82,23 +82,31 @@ def Pearsonr_UserCF(n_user, n_item, tra_data, val_users, K ,TopN):
     N: N表示的是给用户推荐的商品数量，给每个用户推荐相似度最大的N个商品
     '''
 
-
-    if os.path.exists('ratings_user.txt'):
+    if os.path.exists('ratings_item.txt') and os.path.exists('ratings_user.txt'):
         print('读取用户-物品矩阵...')
         with open('ratings_user.txt', 'rb') as f1:
             ratings_user = pickle.load(f1)
+        with open('ratings_item.txt', 'rb') as f2:
+            ratings_item = pickle.load(f2)
         print('读取完毕!')
-    else:
-        ratings_user = dict()    # 双层字典的形式保存用户评分
+    else:  
+        ratings_user = dict()
+        ratings_item = dict()
         print('开始创建用户-物品矩阵...')
         for _, row in tqdm(tra_data.iterrows(),total=len(tra_data)):
-            user,item,rating = row['userID'],row['itemID'],row['Rating']
+            user,item,rating = row['userID'], row['itemID'], row['Rating']
+            if item not in ratings_item:
+                ratings_item[item] = dict()
+            ratings_item[item][user] = rating
             if user not in ratings_user:
                 ratings_user[user] = dict()
             ratings_user[user][item] = rating
+
         print('用户-物品矩阵创建完毕!!!')
         with open('ratings_user.txt', 'wb') as f1:
-            pickle.dump(ratings_user,f1)
+            pickle.dump(ratings_user, f1)
+        with open('ratings_item.txt', 'wb') as f2:
+            pickle.dump(ratings_item, f2)
 
 
     if os.path.exists('user_similarity_matrix.txt'):
@@ -127,7 +135,11 @@ def Pearsonr_UserCF(n_user, n_item, tra_data, val_users, K ,TopN):
         with open('user_similarity_matrix.txt','wb') as f3:
             similarity_matrix = pickle.dump(similarity_matrix,f3)
 
-
+    # 处理pearsonr相关系数为nan的值
+    df = pd.DataFrame(similarity_matrix)
+    df = df.fillna(0)
+    similarity_matrix = df.to_numpy()
+    del df
     # 计算每个用户的平均评分，用于消除用户评分偏置
     avg_user_ratings = np.zeros(n_user)
     for user,rate_list in ratings_user.items():
@@ -135,32 +147,33 @@ def Pearsonr_UserCF(n_user, n_item, tra_data, val_users, K ,TopN):
         avg_user_ratings[user] = avg_rating
 
     # 生成TopN推荐列表
-    # 先筛选出与目标用户最相似的K个用户
-    # 再筛选出K个用户交互过的、且目标用户看过的items，预测这些items的得分
+    # 要预测的物品就是用户没有评分过的物品
+    # 先筛选出对目标物品有过评分的用户
+    # 再从中选出K个与目标用户最相似的用户，利用这些用户对目标物品的评分，代入公式计算
     # 对这些items得分降序排列
     val_users_set = set(val_users.keys())
     rec_dict = dict()
     print('开始预测...')
     for user in tqdm(val_users_set,total = len(val_users_set)):
         user_history = ratings_user[user].keys()
-        similar_users = np.argsort(-similarity_matrix[user])[:K]
-        candidate_items = set()             # 推荐候选集
-        miss_items = list(range(n_item))    # 用户没看过的电影
+        candidate_items = set(range(n_item))
         for i in user_history:
-            miss_items.remove(i)
-        for uuser in similar_users:
-            for item in ratings_user[uuser]:
-                if item in miss_items:
-                    candidate_items.add(item)  
+            candidate_items.remove(i)   # 预测那些用户还没评分过的电影
         record_list = dict() # 记录预测得分
-        weighted_scores = 0 # 分母
-        corr_value_sum = 0 # 分子
         for item in candidate_items:
+            if item not in ratings_item:
+                continue
+            rated_users = ratings_item[item].items()
+            similar_users = sorted(rated_users, key=lambda x:x[1], reverse=True)[:K]
+            similar_users = [x[0] for x in similar_users]
+            weighted_scores = 0 # 分母
+            corr_value_sum = 0 # 分子
             for uuser in similar_users:
                 weighted_scores += similarity_matrix[user][uuser]
                 if item not in ratings_user[uuser]:
-                    ratings_user[uuser][item] = 0
-                corr_value_sum += similarity_matrix[user][uuser] * (ratings_user[uuser][item] - avg_user_ratings[uuser])
+                    corr_value_sum += similarity_matrix[user][uuser] * ( - avg_user_ratings[uuser] )
+                else:
+                    corr_value_sum += similarity_matrix[user][uuser] * (ratings_user[uuser][item] - avg_user_ratings[uuser])
             item_score = avg_user_ratings[user] + corr_value_sum/weighted_scores
             record_list[item] = item_score
         user_rec_list = sorted(record_list.items(),key=lambda x:x[1],reverse=True)[:TopN]
@@ -240,8 +253,8 @@ def Consine_UserCF(tra_users, val_users, K ,TopN):
 if __name__ == "__main__":
     all_data = load_data()
     tra_data, val_data, tra_users, val_users, n_user, n_item = all_data
-    #rec_dict = Pearsonr_UserCF(n_user, n_item, tra_data, val_users, 10 ,10)
-    rec_dict = Consine_UserCF(tra_users, val_users, 10 ,10)
+    rec_dict = Pearsonr_UserCF(n_user, n_item, tra_data, val_users, 10 ,10)
+    #rec_dict = Consine_UserCF(tra_users, val_users, 10 ,10)
     eval(rec_dict,val_users,tra_users)
 
 """
@@ -251,5 +264,11 @@ coverage 41.2
 Popularity 6.91
 """
 
-
+"""
+Pearnsonr_UserCF
+recall: 0.01
+precision 0.22
+coverage 0.14
+Popularity 5.659
+"""
 
