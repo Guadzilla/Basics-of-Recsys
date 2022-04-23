@@ -91,7 +91,6 @@ def Pearsonr_ItemCF(n_user, n_item, tra_data, val_users, K ,TopN):
             ratings_user = pickle.load(f1)
         with open('ratings_item.txt', 'rb') as f2:
             ratings_item = pickle.load(f2)
-        print('读取完毕!')
     else:  
         ratings_user = dict()
         ratings_item = dict()
@@ -115,7 +114,6 @@ def Pearsonr_ItemCF(n_user, n_item, tra_data, val_users, K ,TopN):
         print('读取物品相似度矩阵...')
         with open('item_similarity_matrix.txt','rb') as f3:
             similarity_matrix = pickle.load(f3)
-        print('读取完毕!')
     else:
         print('开始创建物品相似度矩阵...')
         # 相似度矩阵用二维数组储存，如果用字典保存，测试集评估会出现 key_error，比较麻烦
@@ -152,31 +150,34 @@ def Pearsonr_ItemCF(n_user, n_item, tra_data, val_users, K ,TopN):
     # 生成TopN推荐列表
     # 要预测的物品就是用户没有评分过的物品
     # 先筛选出用户交互过的商品
-    # 再选出与目标物品最相似的K个物品
-    # 根据K个物品的得分，计算目标物品的得分
+    # 再选出与这些物品最相似的K个物品，并且过滤掉用户已经交互过的物品
+    # 再根据用户交互过的商品的得分，计算目标物品的得分
     # 对这些items得分降序排列
     val_users_set = set(val_users.keys())
     rec_dict = dict()
+    factor = dict()
+    print('给用户进行推荐...')
     for user in tqdm(val_users_set, total=len(val_users_set)):
+        rec_dict[user] = dict() # 候选集得分
+        factor[user] = dict() # 分母
         user_history = ratings_user[user].keys()
-        candidate_items = set(range(n_item))
-        for i in user_history:
-            candidate_items.remove(i)   # 预测那些用户还没评分过的电影
-        record_list = dict() # 记录预测得分
-        for item in candidate_items:
-            rated_items = ratings_user[user].items()    # 先筛选出用户交互过的商品
-            similar_items = sorted(rated_items, key=lambda x:x[1], reverse=True)[:K]    # 再选出与目标物品最相似的K个物品
-            similar_items = [x[0] for x in similar_items]
-            weighted_scores = 0 # 分母
-            corr_value_sum = 0 # 分子
-            for iitem in similar_items: # 根据K个物品的得分，计算目标物品的得分
-                weighted_scores += similarity_matrix[item][iitem]
-                corr_value_sum += similarity_matrix[item][iitem] * (ratings_user[user][iitem] - avg_item_ratings[iitem])
-            item_score = avg_item_ratings[item] + corr_value_sum/weighted_scores
-            record_list[item] = item_score
-        user_rec_list = sorted(record_list.items(), key=lambda x:x[1], reverse=True)[:TopN] # 对这些items得分降序排列
-        rec_dict[user] = [x[0] for x in user_rec_list]  # 得到该用户的推荐列表
-    print('预测完毕!')
+        for item in user_history:   # 选出与用户交互过的物品最相似的K个物品
+            similar_items_idx = np.argsort(-similarity_matrix[item])[:K]
+            similar_items = similarity_matrix[item][similar_items_idx]
+            for iitem, score in zip(similar_items_idx, similar_items):
+                if iitem not in user_history:   # 过滤掉用户已经交互过的物品
+                    if iitem not in rec_dict[user]:
+                        rec_dict[user][iitem] = 0
+                    if iitem not in factor[user]:
+                        factor[user][iitem] = 0
+                    rec_dict[user][iitem] += score * (ratings_user[user][item] - avg_item_ratings[item])
+                    factor[user][iitem] += score
+        for item_idx,rank_score in rec_dict[user].items():
+            rank_score /= factor[user][item_idx]
+            rank_score += avg_item_ratings[item_idx]
+    print('为每个用户筛选出相似度分数最高的Ｎ个商品...')
+    items_rank = {k: sorted(v.items(), key=lambda x: x[1], reverse=True)[:TopN] for k, v in rec_dict.items()}
+    items_rank = {k: set([x[0] for x in v]) for k, v in items_rank.items()}
     return rec_dict
 
 def Cosine_Item_CF(trn_user_items, val_user_items, K, N):
@@ -203,7 +204,7 @@ def Cosine_Item_CF(trn_user_items, val_user_items, K, N):
     # 在计算商品协同过滤矩阵的同时还需要记录每个商品被多少不同用户交互的次数，其表示形式为: num = {item_id1：num1, item_id２:num2, ...}
     sim = {}
     num = {}
-    print('构建相似性矩阵．．．')
+    print('构建相似性矩阵...')
     for uid, items in tqdm(trn_user_items.items()):
         for i in items:    
             if i not in num:
