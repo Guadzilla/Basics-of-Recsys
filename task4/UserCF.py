@@ -50,9 +50,12 @@ def pearsonrSim(x,y):
     """
     返回皮尔逊相关系数
     """
-    if len(x)<2:
-        return -1
-    return pearsonr(x,y)[0]
+    if len(x)==0:
+        return 0
+    elif len(x)==1:
+        return 1
+    else:
+        return pearsonr(x,y)[0]
 
 def cosineSim(x,y):
     """
@@ -199,7 +202,11 @@ def Consine_UserCF(tra_users, val_users, K ,TopN):
             item_users[item].add(uid)
 
 
-    # 计算用户协同过滤矩阵
+    # 只要用户u,v共同交互过某个物品，它们之间的相似度就 +1  --->  协同过滤矩阵
+    # 最后再除以 sqrt(N(u)*N(v))  --->  相似度矩阵
+
+
+    # 计算用户协同过滤矩阵 
     # 即利用item-users倒排表统计用户之间交互的商品数量，用户协同过滤矩阵的表示形式为：sim = {user_id1: {user_id2: num1}, user_id3:{user_id4: num2}, ...}
     # 协同过滤矩阵是一个双层的字典，用来表示用户之间共同交互的商品数量
     # 在计算用户协同过滤矩阵的同时还需要记录每个用户所交互的商品数量，其表示形式为: num = {user_id1：num1, user_id2:num2, ...}
@@ -219,7 +226,7 @@ def Consine_UserCF(tra_users, val_users, K ,TopN):
                         sim[u][v] = 0
                     sim[u][v] += 1
 
-    # 计算用户相似度矩阵
+    # 计算用户相似度矩阵 step2
     # 用户协同过滤矩阵其实相当于是余弦相似度的分子部分,还需要除以分母,即两个用户分别交互的item数量的乘积
     # 两个用户分别交互的item数量的乘积就是上面统计的num字典
     print('计算相似度...')

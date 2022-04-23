@@ -50,9 +50,12 @@ def pearsonrSim(x,y):
     """
     返回皮尔逊相关系数
     """
-    if len(x)<2:
-        return -1
-    return pearsonr(x,y)[0]
+    if len(x)==0:
+        return 0
+    elif len(x)==1:
+        return 1
+    else:
+        return pearsonr(x,y)[0]
 
 def cosineSim(x,y):
     """
@@ -189,7 +192,11 @@ def Cosine_Item_CF(trn_user_items, val_user_items, K, N):
     # 由于输入的训练数据trn_user_items,本身就是这中格式的，所以这里不需要进行额外的计算
     
 
-    # 计算商品协同过滤矩阵
+    # 只要物品u,v共同被某个用户交互过，它们之间的相似度就 +1  --->  协同过滤矩阵
+    # 最后再除以 sqrt(N(u)*N(v))  --->  相似度矩阵
+
+
+    # 计算商品协同过滤矩阵  
     # 即利用user-items倒排表统计商品与商品之间被共同的用户交互的次数
     # 商品协同过滤矩阵的表示形式为：sim = {item_id1: {item_id２: num1}, item_id３: {item_id４: num２}, ...}
     # 商品协同过滤矩阵是一个双层的字典，用来表示商品之间共同交互的用户数量
@@ -210,7 +217,7 @@ def Cosine_Item_CF(trn_user_items, val_user_items, K, N):
                 if i != j:
                     sim[i][j] += 1
     
-    # 计算物品的相似度矩阵
+    # 计算物品的相似度矩阵 step 2
     # 商品协同过滤矩阵其实相当于是余弦相似度的分子部分,还需要除以分母,即两个商品被交互的用户数量的乘积
     # 两个商品被交互的用户数量就是上面统计的num字典
     print('计算协同过滤矩阵．．．')
