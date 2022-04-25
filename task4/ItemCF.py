@@ -51,7 +51,7 @@ def pearsonrSim(x,y):
     返回皮尔逊相关系数
     """
     if len(x)==0:
-        return 0
+        return -1
     elif len(x)==1:
         return 1
     else:
@@ -260,14 +260,6 @@ if __name__ == "__main__":
 
 
 """
-Pearsonr_ItemCF()
-recall: 0.18
-precision 0.61
-coverage 35.17
-Popularity 5.539
-"""
-
-"""
 Cosine_Item_CF()
 recall: 9.2
 precision 30.48
@@ -275,3 +267,10 @@ coverage 19.18
 Popularity 7.171
 """
 
+"""
+Pearsonr_ItemCF()
+recall: 0.18
+precision 0.61
+coverage 35.17
+Popularity 5.539
+"""
