@@ -158,27 +158,29 @@ def Pearsonr_ItemCF(n_user, n_item, tra_data, val_users, K ,TopN):
     factor = dict()
     print('给用户进行推荐...')
     for user in tqdm(val_users_set, total=len(val_users_set)):
-        rec_dict[user] = dict() # 候选集得分
+        rec_dict[user] = dict() # 该用户的推荐物品得分字典
         factor[user] = dict() # 分母
         user_history = ratings_user[user].keys()
         for item in user_history:   # 选出与用户交互过的物品最相似的K个物品
             similar_items_idx = np.argsort(-similarity_matrix[item])[:K]
-            similar_items = similarity_matrix[item][similar_items_idx]
-            for iitem, score in zip(similar_items_idx, similar_items):
+            similarity_of_items = similarity_matrix[item][similar_items_idx]
+            for iitem, score in zip(similar_items_idx, similarity_of_items):
                 if iitem not in user_history:   # 过滤掉用户已经交互过的物品
                     if iitem not in rec_dict[user]:
                         rec_dict[user][iitem] = 0
                     if iitem not in factor[user]:
                         factor[user][iitem] = 0
-                    rec_dict[user][iitem] += score * (ratings_user[user][item] - avg_item_ratings[item])
+                    #rec_dict[user][iitem] += score * (ratings_user[user][item] - avg_item_ratings[item])   # 含偏置
+                    rec_dict[user][iitem] += score * ratings_user[user][item] # 不含偏置
                     factor[user][iitem] += score
         for item_idx,rank_score in rec_dict[user].items():
+            #rank_score += avg_item_ratings[item_idx]   # 含偏置
             rank_score /= factor[user][item_idx]
-            rank_score += avg_item_ratings[item_idx]
+            rec_dict[user][item_idx] = rank_score
     print('为每个用户筛选出相似度分数最高的Ｎ个商品...')
     items_rank = {k: sorted(v.items(), key=lambda x: x[1], reverse=True)[:TopN] for k, v in rec_dict.items()}
     items_rank = {k: set([x[0] for x in v]) for k, v in items_rank.items()}
-    return rec_dict
+    return items_rank
 
 def Cosine_Item_CF(trn_user_items, val_user_items, K, N):
     '''

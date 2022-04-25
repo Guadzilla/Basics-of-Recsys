@@ -91,7 +91,6 @@ def Pearsonr_UserCF(n_user, n_item, tra_data, val_users, K ,TopN):
             ratings_user = pickle.load(f1)
         with open('ratings_item.txt', 'rb') as f2:
             ratings_item = pickle.load(f2)
-        print('读取完毕!')
     else:  
         ratings_user = dict()
         ratings_item = dict()
@@ -116,7 +115,6 @@ def Pearsonr_UserCF(n_user, n_item, tra_data, val_users, K ,TopN):
         print('读取用户相似度矩阵...')
         with open('user_similarity_matrix.txt','rb') as f3:
             similarity_matrix = pickle.load(f3)
-        print('读取完毕!')
     else:
         print('开始创建用户相似度矩阵...')
         # 相似度矩阵用二维数组储存，如果用字典保存，测试集评估会出现 key_error，比较麻烦
@@ -149,6 +147,7 @@ def Pearsonr_UserCF(n_user, n_item, tra_data, val_users, K ,TopN):
         avg_rating = np.mean([rate for rate in rate_list.values()])
         avg_user_ratings[user] = avg_rating
 
+    '''
     # 生成TopN推荐列表
     # 要预测的物品就是用户没有评分过的物品
     # 先筛选出对目标物品有过评分的用户
@@ -181,8 +180,38 @@ def Pearsonr_UserCF(n_user, n_item, tra_data, val_users, K ,TopN):
             record_list[item] = item_score
         user_rec_list = sorted(record_list.items(),key=lambda x:x[1],reverse=True)[:TopN]
         rec_dict[user] = [x[0] for x in user_rec_list]
+    '''
+    # 生成TopN推荐列表
+    # 找到与目标用户最相似的K个用户
+    # 利用这些用户对物品的评分预测目标用户对物品的评分
+    val_users_set = set(val_users.keys())
+    rec_dict = dict()
+    factor = dict()
+    print('开始预测...')
+    for user in tqdm(val_users_set,total = len(val_users_set)):
+        user_history = ratings_user[user].keys()
+        similar_users = np.argsort(-similarity_matrix[user])[:K]
+        similarity_of_users = similarity_matrix[user][similar_users]
+        rec_dict[user] = {} # 该用户的推荐物品得分字典
+        factor[user] = {} # 分母
+        for uuser,score in zip(similar_users, similarity_of_users):
+            for item in ratings_user[uuser]:
+                if item not in user_history:
+                    if item not in rec_dict[user]:
+                        rec_dict[user][item] = 0
+                    if item not in factor[user]:
+                        factor[user][item] = 0
+                    rec_dict[user][item] += score * (ratings_user[uuser][item] - avg_user_ratings[uuser]) # 含偏置
+                    #rec_dict[user][item] += score * ratings_user[uuser][item]  # 不含偏置
+                    factor[user][item] += score
+        for item_idx,rank_score in rec_dict[user].items():
+            rank_score += avg_user_ratings[user] # 含偏置
+            rank_score /= factor[user][item_idx]
+    print('为每个用户筛选出相似度分数最高的Ｎ个商品...')
+    items_rank = {k: sorted(v.items(), key=lambda x: x[1], reverse=True)[:TopN] for k, v in rec_dict.items()}
+    items_rank = {k: set([x[0] for x in v]) for k, v in items_rank.items()}
     print('预测完毕!')
-    return rec_dict
+    return items_rank
 
     
 
@@ -260,7 +289,7 @@ def Consine_UserCF(tra_users, val_users, K ,TopN):
 if __name__ == "__main__":
     all_data = load_data()
     tra_data, val_data, tra_users, val_users, n_user, n_item = all_data
-    rec_dict = Pearsonr_UserCF(n_user, n_item, tra_data, val_users, 10 ,10)
+    rec_dict = Pearsonr_UserCF(n_user, n_item, tra_data, val_users, 100 ,100)
     #rec_dict = Consine_UserCF(tra_users, val_users, 10 ,10)
     eval(rec_dict,val_users,tra_users)
 
@@ -273,9 +302,9 @@ Popularity 6.91
 
 """
 Pearnsonr_UserCF
-recall: 0.01
-precision 0.22
-coverage 0.14
-Popularity 5.659
+recall: 0.31
+precision 1.04
+coverage 34.59
+Popularity 7.07
 """
 
