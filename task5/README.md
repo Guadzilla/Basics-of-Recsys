@@ -187,6 +187,7 @@ UserCF的做法，根据用户对其他物品的打分， 计算用户之间的�
 
 这样训练完之后， 我们就可以得到用户 Alice 和物品 5 的隐向量， 根据这个就可以预测 Alice 对物品 5 的打分。下面的代码的逻辑就是上面这两步， 这里使用带有偏置项和正则项的 MF 算法：
 
+```python
 class SVD():
     def __init__(self, rating_data, F=5, alpha=0.1, lmbda=0.1, max_iter=100):
         self.F = F           # 这个表示隐向量的维度
@@ -199,7 +200,9 @@ class SVD():
         self.lmbda = lmbda    # 正则项系数
         self.max_iter = max_iter    # 最大迭代次数
         self.rating_data = rating_data # 评分矩阵
-        
+```
+
+​        
 
 ```python
     # 初始化矩阵P和Q, 方法很多， 一般用随机数填充， 但随机数大小有讲究， 根据经验， 随机数需要和1/sqrt(F)成正比

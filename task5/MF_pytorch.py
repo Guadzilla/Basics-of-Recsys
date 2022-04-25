@@ -1,5 +1,7 @@
 # 01导入包以及设置随机种子
 import os 
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+import argparse
 import numpy as np
 import torch
 import torch.nn as nn
@@ -8,11 +10,9 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import DataLoader, Dataset
 from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
-
 from evaluate import *
 
 
@@ -22,42 +22,55 @@ torch.manual_seed(seed)
 np.random.seed(seed)
 random.seed(seed)
 
-# 02 以类的方式定义超参数
-class argparse():
-    pass
+# 02 定义超参数
 
-args = argparse()
-args.epochs = 10
-args.batchsize = 128
-args.K = 128
-args.lr = 0.0005
-args.device, = [torch.device("cuda" if torch.cuda.is_available() else "cpu"),]
-args.K_nearest = 100
-args.TopN = 10
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--batch_size', type=int, default=128, help='input batch size')
+parser.add_argument('--embed_dim', type=int, default=128, help='the dimension of item embedding')
+parser.add_argument('--epoch', type=int, default=30, help='the number of epochs to train for') # 50
+parser.add_argument('--lr', type=float, default=0.001, help='learning rate')  
+parser.add_argument('--lr_dc', type=float, default=0.1, help='learning rate decay rate')
+parser.add_argument('--TopN', type=int, default=20, help='number of top score items selected')
+parser.add_argument('--K_nearest', type=int, default=20, help='number of similar items/users')
+args = parser.parse_args()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(args)
 
 # 03 定义log
 log_dir = os.curdir + '/log/' + str(str(datetime.datetime.now()))
 writer = SummaryWriter(log_dir)
 
 
-# 04 定义自己的模型
+# 04 定义模型
 class MF(nn.Module):
     def __init__(self, n_users, n_items, K):
         super(MF,self).__init__()
         self.emb_dim = K
+        self.user_b = nn.Parameter(torch.zeros(size=(n_users,1), requires_grad=True, device=device))  # 用户打分偏置
+        self.item_b = nn.Parameter(torch.zeros(size=(n_items,1), requires_grad=True, device=device))  # 商品打分偏置
+        #self.user_b = nn.Embedding(n_users, 1)
+        #self.item_b = nn.Embedding(n_items, 1)
         self.u_emb = nn.Embedding(n_users, self.emb_dim)
         self.i_emb = nn.Embedding(n_items, self.emb_dim)
+        self.reset_parameters()
+        
+    def reset_parameters(self):
+        stdv = 1.0 / math.sqrt(self.emb_dim)
+        for weight in self.parameters():
+            weight.data.uniform_(-stdv, stdv)
 
     def forward(self, data_u, data_i):
         user_emb = self.u_emb(data_u).unsqueeze(1)
         item_emb = self.i_emb(data_i).unsqueeze(2)
         outputs = user_emb @ item_emb
+        outputs = outputs.squeeze() + self.user_b[data_u].squeeze() + self.item_b[data_i].squeeze()
         return outputs.squeeze()
 
 
-# 05 定义早停类(此步骤可以省略)
+# 05 定义早停类(略)
 
-# 06 定义自己的数据集 load_data,Dataset,DataLoader
+# 06 定义数据集 load_data,Dataset,DataLoader
 def get_data(root_path):
     # 读取数据时，定义的列名
     rnames = ['userID','itemID','Rating','timestamp']
@@ -106,9 +119,9 @@ valid_dataloader = DataLoader(dataset=valid_dataset, batch_size=args.batchsize, 
 
 # 07 实例化模型，设置loss，优化器等
 
-model = MF(n_users, n_items, args.K).to(args.device)
+model = MF(n_users, n_items, args.embed_dim).to(device)
 criterion = torch.nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(),lr=args.lr,weight_decay=0.1)
+optimizer = torch.optim.Adam(model.parameters(),lr=args.lr,weight_decay=args.lr_dc)
 
 train_loss = []
 valid_loss = []
@@ -120,9 +133,9 @@ for epoch in tqdm(range(args.epochs)):
     model.train()
     sum_epoch_loss = 0
     for idx,(data_u,data_i,data_y) in enumerate(train_dataloader,0):
-        data_u = data_u.to(args.device)
-        data_i = data_i.to(args.device)
-        data_y = data_y.to(args.device).to(torch.float32)
+        data_u = data_u.to(device)
+        data_i = data_i.to(device)
+        data_y = data_y.to(device).to(torch.float32)
         outputs = model(data_u,data_i)
         optimizer.zero_grad()
         loss = criterion(data_y,outputs)
@@ -140,9 +153,9 @@ for epoch in tqdm(range(args.epochs)):
     model.eval()
     valid_epoch_loss = 0
     for idx,(data_u,data_i,data_y) in enumerate(valid_dataloader,0):
-        data_u = data_u.to(args.device)
-        data_i = data_i.to(args.device)
-        data_y = data_y.to(args.device).to(torch.float32)
+        data_u = data_u.to(device)
+        data_i = data_i.to(device)
+        data_y = data_y.to(device).to(torch.float32)
         outputs = model(data_u,data_i)
         loss = criterion(outputs,data_y)
         valid_epoch_loss += loss.item()
@@ -151,9 +164,8 @@ for epoch in tqdm(range(args.epochs)):
 
 # 09预测
 
-# 此处可定义一个预测集的Dataloader,也可以直接将你的预测数据reshape,添加batch_size=1
 import faiss
-
+# 使用向量搜索库进行最近邻搜索
 
 # 将验证集中的userID进行排序,方便与faiss搜索的结果进行对应
 val_uids = sorted(set(train_data[0][0]))
@@ -169,10 +181,10 @@ for i, item in enumerate(trn_items):
 trn_user_items = pd.DataFrame(train_data[0].T,columns=['userID','itemID']).groupby('userID')['itemID'].apply(list).to_dict()
 val_user_items = pd.DataFrame(valid_data[0].T,columns=['userID','itemID']).groupby('userID')['itemID'].apply(list).to_dict()
 
-# 使用向量搜索库进行最近邻搜索
+
 user_embedding = model.u_emb.weight.detach().cpu().numpy()
 item_embedding = model.i_emb.weight.detach().cpu().numpy()
-index = faiss.IndexFlatIP(args.K)
+index = faiss.IndexFlatIP(args.embed_dim)
 index.add(item_embedding)
 D, I = index.search(np.ascontiguousarray(user_embedding), args.K_nearest)
 
