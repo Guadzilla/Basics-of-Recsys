@@ -1,9 +1,10 @@
 *.txt
 *.dat
+__pycache__/
 **/__pychae__
 **/.ipynb_checkpoints
 */.ipynb_checkpoints
-*/__pycache_
+*/__pycache__
 */log
 **/log
 
