@@ -1,4 +1,5 @@
 import math
+from sklearn.metrics import mean_squared_error
 
 def rec_eval(val_rec_items, val_user_items, trn_user_items):
     print('recall:',Recall(val_rec_items, val_user_items))
@@ -78,3 +79,9 @@ def Popularity(Rec_dict, Trn_dict):
                 pop += math.log(pop_items[item] + 1) # 物品流行度分布满足长尾分布,取对数可以使得平均值更稳定
                 num += 1  
     return round(pop / num, 3)
+
+
+def RMSE(val_list, pre_list):
+    outputs = mean_squared_error(val_list, pre_list)
+    outputs = math.sqrt(outputs)
+    return outputs

@@ -1,5 +1,6 @@
 *.txt
 *.dat
+*.pth
 __pycache__/
 **/__pychae__
 **/.ipynb_checkpoints
@@ -7,4 +8,4 @@ __pycache__/
 */__pycache__
 */log
 **/log
-
+*/saved

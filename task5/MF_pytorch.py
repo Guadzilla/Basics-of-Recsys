@@ -1,6 +1,6 @@
 # 01导入包以及设置随机种子
 import os 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 import argparse
 import numpy as np
 import torch
@@ -14,7 +14,7 @@ from sklearn.preprocessing import LabelEncoder
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from evaluate import *
-
+from EarlyStopping import EarlyStopping
 
 import random
 seed = 42
@@ -26,10 +26,12 @@ random.seed(seed)
 
 parser = argparse.ArgumentParser()
 
+parser.add_argument('--num_workers', type=int, default=8, help='the number of dataloader workers')
 parser.add_argument('--batch_size', type=int, default=128, help='input batch size')
-parser.add_argument('--embed_dim', type=int, default=128, help='the dimension of item embedding')
-parser.add_argument('--epoch', type=int, default=30, help='the number of epochs to train for') # 50
-parser.add_argument('--lr', type=float, default=0.001, help='learning rate')  
+parser.add_argument('--embed_dim', type=int, default=256, help='the dimension of item embedding')
+parser.add_argument('--epochs', type=int, default=50, help='the number of epochs to train for') # 50
+parser.add_argument('--patience', type=int, default=5, help='EarlyStopping patience') 
+parser.add_argument('--lr', type=float, default=0.5, help='learning rate')  
 parser.add_argument('--lr_dc', type=float, default=0.1, help='learning rate decay rate')
 parser.add_argument('--TopN', type=int, default=20, help='number of top score items selected')
 parser.add_argument('--K_nearest', type=int, default=20, help='number of similar items/users')
@@ -69,6 +71,7 @@ class MF(nn.Module):
 
 
 # 05 定义早停类(略)
+early_stopping = EarlyStopping(patience=args.patience,verbose=True)
 
 # 06 定义数据集 load_data,Dataset,DataLoader
 def get_data(root_path):
@@ -112,9 +115,9 @@ class MovieDataset(Dataset):
 
 
 train_dataset = MovieDataset(train_data)
-train_dataloader = DataLoader(dataset=train_dataset, batch_size=args.batchsize, shuffle=True ,num_workers=8)
+train_dataloader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True ,num_workers=args.num_workers)
 valid_dataset = MovieDataset(valid_data)
-valid_dataloader = DataLoader(dataset=valid_dataset, batch_size=args.batchsize, shuffle=True ,num_workers=8)
+valid_dataloader = DataLoader(dataset=valid_dataset, batch_size=args.batch_size, shuffle=True ,num_workers=args.num_workers)
 
 
 # 07 实例化模型，设置loss，优化器等
@@ -130,6 +133,7 @@ valid_epochs_loss = []
 
 # 08 开始训练
 for epoch in tqdm(range(args.epochs)):
+    #=====================train============================
     model.train()
     sum_epoch_loss = 0
     for idx,(data_u,data_i,data_y) in enumerate(train_dataloader,0):
@@ -162,6 +166,11 @@ for epoch in tqdm(range(args.epochs)):
     valid_epoch_loss /= len(valid_dataloader)
     writer.add_scalar('loss/valid_loss', valid_epoch_loss, epoch)
 
+    #==================early stopping======================
+    early_stopping(valid_epoch_loss,model=model,path='saved')
+    if early_stopping.early_stop:
+        print("Early stopping")
+        break
 # 09预测
 
 import faiss
@@ -202,3 +211,23 @@ for i, u in enumerate(val_uids):
 
 # 计算评价指标
 rec_eval(val_rec, val_user_items, trn_user_items)
+
+# 计算RMSE
+predict_rating_all = np.matmul(user_embedding,item_embedding.T)
+valid_matrix = []
+for idx,pair in enumerate(valid_data[0].T):
+    user,item = pair
+    rating = valid_data[1][idx]
+    valid_matrix.append([user,item,rating])
+valid_matrix = pd.DataFrame(valid_matrix,columns=['userID','itemID','Rating'])
+valid_list = valid_matrix['Rating'].to_list()
+predict_list = []
+
+for idx, row in valid_matrix.iterrows():
+    userID,itemID = row['userID'],row['itemID']
+    predict_list.append(predict_rating_all[userID][itemID])
+
+rmse = RMSE(valid_list,predict_list)
+print(f'均方根误差RMSE: {round(rmse,5)}')
+
+    
