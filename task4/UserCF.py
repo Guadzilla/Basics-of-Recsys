@@ -11,7 +11,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from scipy.stats import pearsonr
 from collections import defaultdict
 from tqdm import tqdm
-from evaluate import Recall,Precision,Coverage,Popularity
+from evaluate import Recall,Precision,Coverage,Popularity,RMSE
 
 
 def load_data():
@@ -211,7 +211,7 @@ def Pearsonr_UserCF(n_user, n_item, tra_data, val_users, K ,TopN):
     items_rank = {k: sorted(v.items(), key=lambda x: x[1], reverse=True)[:TopN] for k, v in rec_dict.items()}
     items_rank = {k: set([x[0] for x in v]) for k, v in items_rank.items()}
     print('预测完毕!')
-    return items_rank
+    return rec_dict, items_rank, ratings_user #计算RMSE用
 
     
 
@@ -289,9 +289,28 @@ def Consine_UserCF(tra_users, val_users, K ,TopN):
 if __name__ == "__main__":
     all_data = load_data()
     tra_data, val_data, tra_users, val_users, n_user, n_item = all_data
-    rec_dict = Pearsonr_UserCF(n_user, n_item, tra_data, val_users, 100 ,100)
+    # 1.仅预测是否评分无法计算RMSE
+    # rec_dict = Consine_UserCF(tra_users, val_users, 10 ,10)
+    # eval(rec_dict,val_users,tra_users)
+
+    # 2.预测评分可以计算RMSE
+    rec_dict, TopN_rec_dict, ratings_user = Pearsonr_UserCF(n_user, n_item, tra_data, val_users, 100 ,100)
     #rec_dict = Consine_UserCF(tra_users, val_users, 10 ,10)
-    eval(rec_dict,val_users,tra_users)
+    eval(TopN_rec_dict,val_users,tra_users)
+    pre_list = []
+    rel_list = []
+    for idx,row in val_data.iterrows():
+        userID,itemID,Rating,_ = row
+        rel_list.append(Rating)
+        if userID in rec_dict:
+            if itemID in rec_dict[userID]:
+                pre_list.append(rec_dict[userID][itemID])
+                continue
+        pre_list.append(0)
+
+    rmse = RMSE(rel_list,pre_list)
+    print(f'均方根误差RMSE:{round(rmse,5)}')
+
 
 """
 recall: 8.35

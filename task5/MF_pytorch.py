@@ -177,8 +177,8 @@ import faiss
 # 使用向量搜索库进行最近邻搜索
 
 # 将验证集中的userID进行排序,方便与faiss搜索的结果进行对应
-val_uids = sorted(set(train_data[0][0]))
-trn_items = sorted(set(train_data[0][1]))
+val_uids = sorted(set(train_data[0].T[0]))
+trn_items = sorted(set(train_data[0].T[1]))
 
 # 获取训练数据的实际索引与相对索引，
 # 实际索引指的是数据中原始的userID
@@ -187,8 +187,9 @@ trn_items_dict = {}
 for i, item in enumerate(trn_items):
     trn_items_dict[i] = item
 
-trn_user_items = pd.DataFrame(train_data[0].T,columns=['userID','itemID']).groupby('userID')['itemID'].apply(list).to_dict()
-val_user_items = pd.DataFrame(valid_data[0].T,columns=['userID','itemID']).groupby('userID')['itemID'].apply(list).to_dict()
+# train_data: array([[user1,item1],[user2,item2],...],[rating1,rating2,...])
+trn_user_items = pd.DataFrame(train_data[0],columns=['userID','itemID']).groupby('userID')['itemID'].apply(list).to_dict()
+val_user_items = pd.DataFrame(valid_data[0],columns=['userID','itemID']).groupby('userID')['itemID'].apply(list).to_dict()
 
 
 user_embedding = model.u_emb.weight.detach().cpu().numpy()
@@ -215,7 +216,7 @@ rec_eval(val_rec, val_user_items, trn_user_items)
 # 计算RMSE
 predict_rating_all = np.matmul(user_embedding,item_embedding.T)
 valid_matrix = []
-for idx,pair in enumerate(valid_data[0].T):
+for idx,pair in enumerate(valid_data[0]):
     user,item = pair
     rating = valid_data[1][idx]
     valid_matrix.append([user,item,rating])

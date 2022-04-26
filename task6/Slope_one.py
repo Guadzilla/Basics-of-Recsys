@@ -21,8 +21,8 @@ from evaluate import Recall,Precision,Coverage,Popularity,RMSE
 def get_data(root_path):
     # 读取数据时，定义的列名
     rnames = ['userID','itemID','Rating','timestamp']
-    #data = pd.read_csv(os.path.join(root_path, 'ratings.dat'), sep='::', engine='python', names=rnames)
-    data = pd.read_csv(os.path.join(root_path, 'sample.csv'))
+    data = pd.read_csv(os.path.join(root_path, 'ratings.dat'), sep='::', engine='python', names=rnames)
+    #data = pd.read_csv(os.path.join(root_path, 'sample.csv'))
 
     lbe = LabelEncoder()
     data['userID'] = lbe.fit_transform(data['userID'])
@@ -93,7 +93,8 @@ def predict(Ratings_diffs, N_set, valid_data, users_rating):
     # 首先找出Alice交互过的物品哪些与要预测的物品有过”共同被统一用户评分“的经历，即存在倒排索引Ratings_item[x][y]
     pre_list = []
     rel_list = []
-    for idx,pairs in enumerate(valid_data[0]):
+    print('开始预测...')
+    for idx,pairs in tqdm(enumerate(valid_data[0]),total=len(valid_data[1])):
         user,item = pairs
         rating = valid_data[1][idx]
         if user not in users_rating or item not in Ratings_diffs:
