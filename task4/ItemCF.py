@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.stats import pearsonr
 from collections import defaultdict
-from tqdm import tqdm
+from tqdm import tqdm   
 from evaluate import Recall,Precision,Coverage,Popularity,RMSE
 
 
@@ -261,13 +261,18 @@ if __name__ == "__main__":
     # 2.预测评分可以计算RMSE
     rec_dict, TopN_rec_dict, ratings_user = Pearsonr_ItemCF(n_user, n_item, tra_data, val_users, 10 ,10)
     eval(TopN_rec_dict,val_users,tra_users)
-    rec_list = []
     pre_list = []
-    for user,item_rating in rec_dict.items():
-        for item, rating in item_rating.items():
-            pre_list.append(rating)
-            rec_list.append(ratings_user[user][item])
-    rmse = RMSE(rec_list,pre_list)
+    rel_list = []
+    for idx,row in val_data.iterrows():
+        userID,itemID,Rating,_ = row
+        rel_list.append(Rating)
+        if userID in rec_dict:
+            if itemID in rec_dict[userID]:
+                pre_list.append(rec_dict[userID][itemID])
+                continue
+        pre_list.append(0)
+
+    rmse = RMSE(rel_list,pre_list)
     print(f'均方根误差RMSE:{round(rmse,5)}')
     
 

@@ -90,8 +90,8 @@ def get_data(root_path):
     X = np.array(data[['userID','itemID']])
     Y = np.array(data['Rating'])
     tra_X, val_X, tra_Y, val_Y = train_test_split(X, Y, test_size=0.2)
-    train_data = (tra_X.T, tra_Y)
-    valid_data = (val_X.T, val_Y)
+    train_data = (tra_X, tra_Y)
+    valid_data = (val_X, val_Y)
 
     return n_users, n_items, train_data, valid_data
 
@@ -107,7 +107,7 @@ class MovieDataset(Dataset):
     def __getitem__(self, index):
         x = self.data[0]
         y = self.data[1]
-        return x[0][index],x[1][index],y[index]
+        return x[index][0],x[index][1],y[index]
 
     def __len__(self):
         return len(self.data[1])
