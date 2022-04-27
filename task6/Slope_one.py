@@ -105,11 +105,11 @@ def predict(Ratings_diffs, N_set, valid_data, users_rating):
             if iitem in user_history:
                 candidate_items.add(item)
         weighted_score = 0
-        weighted_sum = 0
+        weight_sum = 0
         for iiitem in Ratings_diffs[item]:
-            weighted_sum += N_set[item][iiitem]
+            weight_sum += N_set[item][iiitem]
             weighted_score += Ratings_diffs[item][iiitem] * N_set[item][iiitem]
-        pre_list.append(weighted_score/weighted_sum)
+        pre_list.append(weighted_score/weight_sum)
         rel_list.append(rating)
     return pre_list, rel_list
 
