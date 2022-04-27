@@ -21,18 +21,6 @@ def load_data(file_path):
     users_train = tra_data['userID'].unique().tolist()
     users_valid = val_data['userID'].unique().tolist()
 
-
-    """    
-    # 划分train,valid
-    n_data = list(range(len(data)))
-    users = data["itemID"].unique().tolist()
-    random.shuffle(n_data)
-    # 提取80%的消费者
-    users_train = [n_data[i] for i in range(round(0.8*len(n_data)))]
-    # 分为训练集和验证集
-    train_df = data[data['userID'].isin(users_train)]
-    validation_df = data[~data['userID'].isin(users_train)]"""
-
     """训练集"""
     # 存储消费者的购买历史
     train_users = {}
