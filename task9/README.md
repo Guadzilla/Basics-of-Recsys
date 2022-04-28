@@ -71,7 +71,7 @@ def save_rec_dict(save_path,rec_dict):
     pickle.dump(rec_dict, open(os.path.join(save_path,'word2vec_rec_dict.txt'), 'wb'))
 ```
 
-保存的格式为字典：`Top50_rec_dict={uid1:{iid1:score,iid3:score,...}, uid2:{iid2:score,iid3:score,...},...}`
+保存的格式为字典：`rec_dict={uid1:{iid1:score,iid3:score,...}, uid2:{iid2:score,iid3:score,...},...}`
 
 ## 模型融合
 

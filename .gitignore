@@ -2,6 +2,7 @@
 *.dat
 *.pth
 *.csv
+*.xlsx
 __pycache__/
 **/__pychae__
 **/.ipynb_checkpoints
