@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 import numpy as np
 import pickle
@@ -287,30 +288,35 @@ def Consine_UserCF(tra_users, val_users, K ,TopN):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--TopN', type=int, default=10, help='number of top score items selected')
+    parser.add_argument('--TopK', type=int, default=10, help='number of similar items/users')
+    parser.add_argument('--rmse', action='store_true', help='number of similar items/users')
+    args = parser.parse_args()
     all_data = load_data()
     tra_data, val_data, tra_users, val_users, n_user, n_item = all_data
-    # 1.仅预测是否评分无法计算RMSE
-    # rec_dict = Consine_UserCF(tra_users, val_users, 10 ,10)
-    # eval(rec_dict,val_users,tra_users)
-
+    if not args.rmse:
+        # 1.仅预测是否评分无法计算RMSE
+        rec_dict = Consine_UserCF(tra_users, val_users, 10 ,10)
+        eval(rec_dict,val_users,tra_users)
+    else:
     # 2.预测评分可以计算RMSE
-    rec_dict, TopN_rec_dict, ratings_user = Pearsonr_UserCF(n_user, n_item, tra_data, val_users, 100 ,100)
-    #rec_dict = Consine_UserCF(tra_users, val_users, 10 ,10)
-    eval(TopN_rec_dict,val_users,tra_users)
-    pre_list = []
-    rel_list = []
-    for idx,row in val_data.iterrows():
-        userID,itemID,Rating,_ = row
-        rel_list.append(Rating)
-        if userID in rec_dict:
-            if itemID in rec_dict[userID]:
-                pre_list.append(rec_dict[userID][itemID])
-                continue
-        pre_list.append(0)
+        rec_dict, TopN_rec_dict, ratings_user = Pearsonr_UserCF(n_user, n_item, tra_data, val_users, 100 ,100)
+        #rec_dict = Consine_UserCF(tra_users, val_users, 10 ,10)
+        eval(TopN_rec_dict,val_users,tra_users)
+        pre_list = []
+        rel_list = []
+        for idx,row in val_data.iterrows():
+            userID,itemID,Rating,_ = row
+            rel_list.append(Rating)
+            if userID in rec_dict:
+                if itemID in rec_dict[userID]:
+                    pre_list.append(rec_dict[userID][itemID])
+                    continue
+            pre_list.append(0)
 
-    rmse = RMSE(rel_list,pre_list)
-    print(f'均方根误差RMSE:{round(rmse,5)}')
-
+        rmse = RMSE(rel_list,pre_list)
+        print(f'均方根误差RMSE:{round(rmse,5)}')
 
 """
 recall: 8.35
