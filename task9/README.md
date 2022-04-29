@@ -4,13 +4,11 @@
 - 可以考虑对每个召回模型的物品打分进行相加，也可以加权求和。
 - 分别计算每个模型 & 多路召回模型的Top10、Top20、Top50的命中率。
 
-代码地址： https://github.com/Guadzilla/recpre
-
-根据前面完成的任务，5个召回模型分别是 ItemCF、UserCF、SVD、SlopeOne、Word2Vec。
+根据前面完成的任务，5个召回模型分别是 ItemCF、UserCF、MF、SlopeOne、Word2Vec。
 
 **任务目标**：对用户是否评分做出预测，即评分只有0和1（数据集中用户评分过的电影评分都取1，未评分过的电影评分都取0），进行推荐 TopN 推荐。
 
-这样的话 SlopeOne 没法做了，因为评分只有0和1，有评分的哪些物品的评分都是1，物品评分之间没有均差。当然也可以把任务改为预测5分制的评分；或者两阶段预测，先预测是否会评分，再预测会评多少分。那样都需要对模型做不少修改，暂时没有精力做，图省事就只实现了4个召回模型 ItemCF、UserCF、SVD、Word2Vec。
+这样的话 SlopeOne 没法做了，因为评分只有0和1，有评分的哪些物品的评分都是1，物品评分之间没有均差。当然也可以把任务改为预测5分制的评分；或者两阶段预测，先预测是否会评分，再预测会评多少分。那样都需要对模型做不少修改，暂时没有精力做，图省事就只实现了4个召回模型 ItemCF、UserCF、MF、Word2Vec。
 
 **进行多路召回（模型融合），步骤大致分为以下几步**：
 
@@ -45,7 +43,7 @@ def load_and_save(load_path, save_path, test_rate = 0.1):
     pickle.dump(train_users, open(os.path.join(save_path,'train_users.txt'), 'wb'))
     pickle.dump(valid_users, open(os.path.join(save_path,'valid_users.txt'), 'wb'))
 
-load_and_save(load_path='../dataset/ml-1m', save_path='./data', test_rate=0.1)
+load_and_save(load_path='../ml-1m', save_path='./data', test_rate=0.1)
 ```
 
 ## 训练各模型
@@ -60,9 +58,9 @@ Word2Vec.py		-->	  word2vec算法
 
 ## 保存各模型指标
 
-各模型在验证集上的评估指标为：
+所有模型的 TopK 都取100，各模型在验证集上的评估指标为：
 
-![image-20220428195502828](https://wjm-images.oss-cn-beijing.aliyuncs.com/img-hosting/image-20220428195502828.png)
+![image-20220429174656385](https://wjm-images.oss-cn-beijing.aliyuncs.com/img-hosting/image-20220429174656385.png)
 
 保存各模型的预测结果，注意保存的是没有截断 TopN 的推荐列表：
 
@@ -71,7 +69,7 @@ def save_rec_dict(save_path,rec_dict):
     pickle.dump(rec_dict, open(os.path.join(save_path,'word2vec_rec_dict.txt'), 'wb'))
 ```
 
-保存的格式为字典：`rec_dict={uid1:{iid1:score,iid3:score,...}, uid2:{iid2:score,iid3:score,...},...}`
+保存的格式为字典：`Top50_rec_dict={uid1:{iid1:score,iid3:score,...}, uid2:{iid2:score,iid3:score,...},...}`
 
 ## 模型融合
 
@@ -133,7 +131,7 @@ Top10_rec_dict = {k: v[:10] for k, v in Top50_rec_dict.items()}
 Top20_rec_dict = {k: v[:20] for k, v in Top50_rec_dict.items()}
 
 # 计算评价指标
-def bag_eval(val_rec_items, val_user_items, trn_user_items):
+def stack_eval(val_rec_items, val_user_items, trn_user_items):
     recall = Recall(val_rec_items, val_user_items)
     precision = Precision(val_rec_items, val_user_items)
     coverage = Coverage(val_rec_items, trn_user_items)
@@ -149,6 +147,6 @@ print('\nDone.')
 
 实验结果：最优结果红色加粗，次优结果橙色加粗。前四行是单模型，后面的都是融合模型，取每个模型的首字母表示每个模型。
 
-![image-20220428234536222](https://wjm-images.oss-cn-beijing.aliyuncs.com/img-hosting/image-20220428234536222.png)
+![image-20220429174808948](https://wjm-images.oss-cn-beijing.aliyuncs.com/img-hosting/image-20220429174808948.png)
 
 居然是单模型UserCF最优...
