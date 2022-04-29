@@ -117,7 +117,7 @@ def predict(Ratings_diffs, N_set, valid_data, users_rating):
 
 
 if __name__ == "__main__":
-    _, _, train_data, valid_data = get_data('../ml-1m')
+    _, _, train_data, valid_data = get_data('../dataset/ml-1m')
     users_rating, items_rating = user_item_dict(train_data)
     Ratings_diffs, N_set = Rating_diffs_matrix(items_rating)
     pre_list, rel_list = predict(Ratings_diffs, N_set, valid_data, users_rating)

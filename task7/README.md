@@ -207,8 +207,8 @@ warnings.filterwarnings('ignore')
 
 ```python
 def load_data(file_path):
-    df = pd.read_table('../ml-1m/ratings.dat', sep='::', names = ['userID','itemID','Rating','Zip-code'])
-    movies = pd.read_table('../ml-1m/movies.dat',sep='::',names=['MovieID','Title','Genres'],encoding='ISO-8859-1')
+    df = pd.read_table('../dataset/ml-1m/ratings.dat', sep='::', names = ['userID','itemID','Rating','Zip-code'])
+    movies = pd.read_table('../dataset/ml-1m/movies.dat',sep='::',names=['MovieID','Title','Genres'],encoding='ISO-8859-1')
     movies['content'] = movies['Title'] + '__' + movies['Genres']
 
     # 所有userID
@@ -262,7 +262,7 @@ X = model.wv[model.wv.key_to_index.keys()]
 查看 movies 信息，这里我们就选第一个电影 "Toy Story"，看看它的相似电影
 
 ```python
-movies = pd.read_table('../ml-1m/movies.dat',sep='::',names=['MovieID','Title','Genres'],encoding='ISO-8859-1')
+movies = pd.read_table('../dataset/ml-1m/movies.dat',sep='::',names=['MovieID','Title','Genres'],encoding='ISO-8859-1')
 movies.head()
 ```
 
@@ -399,8 +399,8 @@ umap_plot_emb(usersVec_last_10)
 ```python
 
 def load_data(file_path):
-    data = pd.read_table('../ml-1m/ratings.dat', sep='::', names = ['userID','itemID','Rating','Zip-code'])
-    movies = pd.read_table('../ml-1m/movies.dat',sep='::',names=['MovieID','Title','Genres'],encoding='ISO-8859-1')
+    data = pd.read_table('../dataset/ml-1m/ratings.dat', sep='::', names = ['userID','itemID','Rating','Zip-code'])
+    movies = pd.read_table('../dataset/ml-1m/movies.dat',sep='::',names=['MovieID','Title','Genres'],encoding='ISO-8859-1')
     movies['content'] = movies['Title'] + '__' + movies['Genres']
     # 
     tra_data, val_data = train_test_split(data, test_size=0.2)
@@ -435,7 +435,7 @@ def load_data(file_path):
 
 ```python
 
-train_users, train_corpus, valid_users, valid_corpus, items_dict = load_data('../ml-1m')
+train_users, train_corpus, valid_users, valid_corpus, items_dict = load_data('../dataset/ml-1m')
 # train_users: {user1:[item1,item2,...],user2:[item2,item5,...],...}
 # train_corpus: [[item1,item2,...],[item2,item5,...],...]
 # 训练word2vec模型

@@ -12,8 +12,8 @@ warnings.filterwarnings('ignore')
 from evaluate import rec_eval
 
 def load_data(file_path):
-    data = pd.read_table('../ml-1m/ratings.dat', sep='::', names = ['userID','itemID','Rating','Zip-code'])
-    movies = pd.read_table('../ml-1m/movies.dat',sep='::',names=['MovieID','Title','Genres'],encoding='ISO-8859-1')
+    data = pd.read_table('../dataset/ml-1m/ratings.dat', sep='::', names = ['userID','itemID','Rating','Zip-code'])
+    movies = pd.read_table('../dataset/ml-1m/movies.dat',sep='::',names=['MovieID','Title','Genres'],encoding='ISO-8859-1')
     movies['content'] = movies['Title'] + '__' + movies['Genres']
     # 
     tra_data, val_data = train_test_split(data, test_size=0.2)
@@ -58,7 +58,7 @@ def users_similarity(user_emb):
 
 
 if __name__ == "__main__":
-    train_users, train_corpus, valid_users, valid_corpus, items_dict = load_data('../ml-1m')
+    train_users, train_corpus, valid_users, valid_corpus, items_dict = load_data('../dataset/ml-1m')
     # train_users: {user1:[item1,item2,...],user2:[item2,item5,...],...}
     # train_corpus: [[item1,item2,...],[item2,item5,...],...]
     # 训练word2vec模型

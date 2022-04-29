@@ -97,7 +97,7 @@ def get_data(root_path):
 
 
 print('Loading data...')
-file_paths = '../ml-1m/'
+file_paths = '../dataset/ml-1m/'
 n_users, n_items, train_data, valid_data = get_data(file_paths)
 
 class MovieDataset(Dataset):

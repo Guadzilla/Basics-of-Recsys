@@ -25,4 +25,4 @@ def load_and_save(load_path, save_path, test_rate = 0.1):
     pickle.dump(train_users, open(os.path.join(save_path,'train_users.txt'), 'wb'))
     pickle.dump(valid_users, open(os.path.join(save_path,'valid_users.txt'), 'wb'))
 
-load_and_save(load_path='../ml-1m', save_path='./data', text_rate=0.1)
+load_and_save(load_path='../dataset/ml-1m', save_path='./data', text_rate=0.1)

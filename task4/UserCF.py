@@ -19,9 +19,9 @@ def load_data():
     """
     加载数据，分割训练集、验证集
     """
-    data = pd.read_table('../ml-1m/ratings.dat', sep='::', names = ['userID','itemID','Rating','Zip-code'])
-    users = pd.read_table('../ml-1m/users.dat',sep='::',names=['UserID','Gender','Age','Occupation','Zip-code'])
-    movies = pd.read_table('../ml-1m/movies.dat',sep='::',names=['MovieID','Title','Genres'],encoding='ISO-8859-1')
+    data = pd.read_table('../dataset/ml-1m/ratings.dat', sep='::', names = ['userID','itemID','Rating','Zip-code'])
+    users = pd.read_table('../dataset/ml-1m/users.dat',sep='::',names=['UserID','Gender','Age','Occupation','Zip-code'])
+    movies = pd.read_table('../dataset/ml-1m/movies.dat',sep='::',names=['MovieID','Title','Genres'],encoding='ISO-8859-1')
     user2index = defaultdict(int)
     item2index = defaultdict(int)
     count_user = 0
