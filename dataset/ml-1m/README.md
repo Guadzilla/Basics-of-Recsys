@@ -1,5 +1,10 @@
-SUMMARY
-================================================================================
+# 下载地址
+
+[MovieLens | GroupLens](https://grouplens.org/datasets/movielens/)
+
+ml-1m.zip
+
+# SUMMARY
 
 These files contain 1,000,209 anonymous ratings of approximately 3,900 movies 
 made by 6,040 MovieLens users who joined MovieLens in 2000.
@@ -15,14 +20,14 @@ purposes under the following conditions:
 
      * The user may not state or imply any endorsement from the
        University of Minnesota or the GroupLens Research Group.
-
+    
      * The user must acknowledge the use of the data set in
        publications resulting from the use of the data set
        (see below for citation information).
-
+    
      * The user may not redistribute the data without separate
        permission.
-
+    
      * The user may not use this information for any commercial or
        revenue-bearing purposes without first obtaining permission
        from a faculty member of the GroupLens Research Project at the
