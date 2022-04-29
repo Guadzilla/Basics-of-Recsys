@@ -32,10 +32,11 @@ parser.add_argument('--batch_size', type=int, default=128, help='input batch siz
 parser.add_argument('--embed_dim', type=int, default=100, help='the dimension of item embedding')
 parser.add_argument('--epochs', type=int, default=50, help='the number of epochs to train for') # 50
 parser.add_argument('--patience', type=int, default=5, help='EarlyStopping patience') 
-parser.add_argument('--lr', type=float, default=0.001, help='learning rate')  
+parser.add_argument('--lr', type=float, default=0.005, help='learning rate')  
 parser.add_argument('--lr_dc', type=float, default=0.001, help='learning rate decay rate')
 parser.add_argument('--TopN', type=int, default=50, help='number of top score items selected')
-parser.add_argument('--TopK', type=int, default=10, help='number of similar items/users')
+parser.add_argument('--TopK', type=int, default=100, help='number of similar items/users')
+parser.add_argument('--sample_ratio', type=int, default=1, help='nb of postive sample /nb of negtive sample')  
 args = parser.parse_args()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(args)
@@ -111,10 +112,11 @@ def RandomSelectNegativeSample(train_users, items_pool):
                 continue
             ret[uid][item] = 0
             n += 1
-            if n > len(train_users):
+            if n > args.sample_ratio * len(train_users):
                 break
     return ret
 
+print('负采样...')
 train_data = RandomSelectNegativeSample(train_users, items_pool)
 
 tra_X = []
@@ -162,6 +164,7 @@ optimizer = torch.optim.Adam(model.parameters(),lr=args.lr,weight_decay=args.lr_
 
 
 # 08 开始训练
+print('开始训练...')
 for epoch in tqdm(range(args.epochs)):
     #=====================train============================
     model.train()
@@ -234,7 +237,6 @@ for val_user in tqdm(valid_users):   # valid_users: {uid1:[item1,item2,...],uid2
                 rec_dict[val_user][item] += D[val_user][array_idx]
 
 
-print('为每个用户筛选出相似度分数最高的Ｎ个商品...')
 Top50_rec_dict = {k: sorted(v.items(), key=lambda x: x[1], reverse=True)[:50] for k, v in rec_dict.items()}
 Top50_rec_dict = {k: list([x[0] for x in v]) for k, v in Top50_rec_dict.items()}
 Top10_rec_dict = {k: v[:10] for k, v in Top50_rec_dict.items()}
