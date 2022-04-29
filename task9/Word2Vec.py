@@ -1,4 +1,5 @@
 import os
+import argparse
 import pandas as pd
 import numpy as np
 import pickle
@@ -34,6 +35,10 @@ def save_rec_dict(save_path,rec_dict):
     
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--TopK', type=int, default=100, help='number of similar items/users')
+
+    args = parser.parse_args()
     train_users, train_corpus, valid_users = load_data('./data')
     # train_users: {user1:[item1,item2,...],user2:[item2,item5,...],...}
     # train_corpus: [[item1,item2,...],[item2,item5,...],...]
@@ -71,8 +76,6 @@ if __name__ == "__main__":
 
 
     #=====================UserCF 推荐=======================#
-    TopK = 50
-    TopN = 10
 
     # 对train_user重建索引, 求用户向量, 求重索引的new_train_users, 只需要一次循环就能做完
     # 已有 train_users  # train_users: {user1:[item1,item2,...], user2:[item3,item4,...],...}
@@ -106,7 +109,7 @@ if __name__ == "__main__":
     index.add(usersVec)
 
     # 找TopK相似用户
-    D, I = index.search(usersVec[list(new_valid_users.keys())], TopK+1) # TopK要+1,因为底下计算相似度会计算自身一次
+    D, I = index.search(usersVec[list(new_valid_users.keys())], args.TopK+1) # TopK要+1,因为底下计算相似度会计算自身一次
     similar_users_idxs = I
     similar_users = {}  # similar_users: {faiss_idx1:{faiss_idx2:score,faiss_idx4:score,...},faiss_idx2:{...},...}
     for idx,val_user in enumerate(new_valid_users):

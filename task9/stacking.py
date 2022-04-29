@@ -60,7 +60,7 @@ def mixup(*rec_dicts):
             new_rec_dict[uid][iid] /= num[uid][iid]
     return new_rec_dict
 
-def bag_eval(val_rec_items, val_user_items, trn_user_items):
+def stack_eval(val_rec_items, val_user_items, trn_user_items):
     recall = Recall(val_rec_items, val_user_items)
     precision = Precision(val_rec_items, val_user_items)
     coverage = Coverage(val_rec_items, trn_user_items)
@@ -71,7 +71,6 @@ def bag_eval(val_rec_items, val_user_items, trn_user_items):
 file_path = './data'
 
 # load 各模型推荐得分
-n_items = 3883
 
 # 加载数据
 print('开始加载数据...')
@@ -96,7 +95,7 @@ Top50_rec_dict = {k: list([x[0] for x in v]) for k, v in Top50_rec_dict.items()}
 Top10_rec_dict = {k: v[:10] for k, v in Top50_rec_dict.items()}
 Top20_rec_dict = {k: v[:20] for k, v in Top50_rec_dict.items()}
 print('Top 10,20,50:')
-bag_eval(Top10_rec_dict,valid_users,train_users)
-bag_eval(Top20_rec_dict,valid_users,train_users)
-bag_eval(Top50_rec_dict,valid_users,train_users)
+stack_eval(Top10_rec_dict,valid_users,train_users)
+stack_eval(Top20_rec_dict,valid_users,train_users)
+stack_eval(Top50_rec_dict,valid_users,train_users)
 print('\nDone.')

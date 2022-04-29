@@ -109,7 +109,7 @@ def save_rec_dict(save_path,rec_dict):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--TopN', type=int, default=0, help='number of top score items selected')
-    parser.add_argument('--TopK', type=int, default=50, help='number of similar items/users')
+    parser.add_argument('--TopK', type=int, default=100, help='number of similar items/users')
     parser.add_argument('--rmse', action='store_true', help='number of similar items/users')
     args = parser.parse_args()
 
